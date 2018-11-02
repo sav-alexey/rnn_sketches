@@ -27,7 +27,10 @@ for i in range(len(pos_reviews)):
 
 df['review'] = df['review'].apply((lambda x: re.sub('[^a-zA-z0-9\s]','',x)))   
 
-df.to_csv("Data.csv")     
+df.to_csv("Data.csv") 
+
+
+    
 tokenizer = k.preprocessing.text.Tokenizer(num_words=2500, split=' ')
 tokenizer.fit_on_texts(df['review'].values)
 X = tokenizer.texts_to_sequences(df['review'].values)
@@ -37,25 +40,29 @@ X = k.preprocessing.sequence.pad_sequences(X)
 embed_dim = 256
 lstm_out = 200
 batch_size = 32
+optimazer = k.optimizers.Adam(lr=0.003)
 
-#model = Sequential()
-#model.add(Embedding(2500, embed_dim,input_length = X.shape[1], dropout = 0.2))
-#model.add(LSTM(lstm_out, dropout_U = 0.2, dropout_W = 0.2))
-#model.add(Dense(2,activation='softmax'))
-#model.compile(loss = 'categorical_crossentropy', optimizer='adam',metrics = ['accuracy'])
+model = Sequential()
+model.add(Embedding(2500, embed_dim,input_length = X.shape[1], dropout = 0.2))
+model.add(LSTM(lstm_out, dropout_U = 0.2, dropout_W = 0.2))
+model.add(Dense(1,activation='sigmoid'))
+model.compile(loss = 'binary_crossentropy', optimizer=optimazer,metrics = ['accuracy'])
 #
-Y = pd.get_dummies(df['sentiment']).values
-#X_train, X_valid, Y_train, Y_valid = train_test_split(X,Y, test_size = 0.20, random_state = 36)
+#Y = pd.get_dummies(df['sentiment']).values
+Y = df['sentiment'].values
+X_train, X_valid, Y_train, Y_valid = train_test_split(X,Y, test_size = 0.10, random_state = 42)
 
-model = k.models.load_model('saved_model_1.h5')
-#model.fit(X, Y, batch_size = batch_size, nb_epoch = 1,  verbose = 1)
+#model = k.models.load_model('saved_model_sigmoid.h5')
+model.fit(X_train, Y_train, batch_size = batch_size, nb_epoch = 1,  verbose = 1)
 #model.save('saved_model_1.h5')
-
+model.save('saved_model_sigmoid.h5')
 
 
 with io.open("X_test.txt", "r") as f:
         X_test = f.read().lower()
 
+acc = k.metrics.binary_accuracy(X_valid, Y_valid)
+print(acc)
 testlist = []
 testlist.append(X_test)
 #print(testlist)
@@ -64,11 +71,11 @@ maxlen = X.shape[1]
 X_test = k.preprocessing.sequence.pad_sequences(X_test, maxlen=maxlen)
 #print(X_test[:,:])
 
-pretrained_model = k.models.load_model('saved_model_1.h5')
+pretrained_model = k.models.load_model('saved_model_sigmoid.h5')
 prediction = pretrained_model.predict(X_test)
-sentiment = np.where(prediction[0][0]<0.5, "positive", "negative")
-
-print(prediction, sentiment)
+#sentiment = np.where(prediction[0][0]<0.5, "positive", "negative")
+#print(prediction)
+#print(prediction, sentiment)
     
 
 
